@@ -129,7 +129,7 @@ Widget task3() {
 // При нажатии пишет в консоль "Вы добавили в избранное"
 Widget task4() {
   return IconButton(
-    iconSize: 72,
+    iconSize: 30,
     icon: const Icon(
       Icons.push_pin_rounded,
       color: Colors.red,
