@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-
 import '../../domain/entities/book.dart';
 
 class BookCard extends StatelessWidget {
   final Book book;
   final bool isLiked;
-  final VoidCallback onLikeTap;
+  final VoidCallback onLikeTap; 
 
   const BookCard({
     super.key,
@@ -40,8 +39,10 @@ class BookCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  book.category.displayName, // Теперь будет выводить "Классика", "Фантастика" и т.д.
-                  style: TextStyle(fontSize: 11, color: Colors.grey[800]),
+                  book.title,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -52,16 +53,13 @@ class BookCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: Colors.grey[200],
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    book.category.name.toUpperCase(),
+                    book.category.name.toUpperCase(), // Выводим название enum
                     style: TextStyle(fontSize: 11, color: Colors.grey[800]),
                   ),
                 ),
@@ -101,7 +99,7 @@ class BookCard extends StatelessWidget {
           top: 6,
           right: 6,
           child: GestureDetector(
-            onTap: onLikeTap,
+            onTap: onLikeTap, 
             child: Container(
               padding: const EdgeInsets.all(4),
               decoration: const BoxDecoration(

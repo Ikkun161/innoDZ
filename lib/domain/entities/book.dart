@@ -1,14 +1,4 @@
-
-enum BookCategory {
-  roman('Роман'),
-  classic('Классика'),
-  fantasy('Фэнтези'),
-  sciFi('Фантастика'),
-  drama('Драма');
-
-  final String displayName; 
-  const BookCategory(this.displayName); 
-}
+enum BookCategory { roman, classic, fantasy, sciFi, drama }
 
 class Book {
   final int id;
@@ -16,7 +6,7 @@ class Book {
   final String author;
   final int year;
   final BookCategory category;
-  final String? description; 
+  final String? description; // Необязательное поле
   final int coverColorValue; 
 
   const Book({
