@@ -1,16 +1,22 @@
 import 'package:flutter/material.dart';
+import 'ui/screens/catalog_screen.dart';
 
 void main() {
-  runApp(const MainApp());
+  runApp(const CatalogApp());
 }
 
-class MainApp extends StatelessWidget {
-  const MainApp({super.key});
+class CatalogApp extends StatelessWidget {
+  const CatalogApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      home: Scaffold(body: Center(child: Text('Hello World!'))),
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        scaffoldBackgroundColor: const Color(0xFFF5F5F5),
+        useMaterial3: true,
+      ),
+      home: const CatalogScreen(),
     );
   }
 }
