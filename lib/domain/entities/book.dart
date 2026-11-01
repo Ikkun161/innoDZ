@@ -1,5 +1,7 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class Book {
-  final String? id; // Теперь ID строка и может быть null (для новых книг)
+  final String? id;
   final String title;
   final String author;
   final int year;
@@ -15,19 +17,19 @@ class Book {
     required this.coverColorValue,
   });
 
-  
-  factory Book.fromJson(Map<String, dynamic> json) {
+  // Для Firebase
+  factory Book.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
+    final data = doc.data()!;
     return Book(
-      id: json['id']?.toString(), // На всякий случай переводим в строку
-      title: json['title'] ?? 'Без названия',
-      author: json['author'] ?? 'Неизвестен',
-      year: json['year'] is int ? json['year'] : int.tryParse(json['year'].toString()) ?? 0,
-      category: json['category'] ?? 'Разное',
-      coverColorValue: json['coverColor'] ?? 'FFCCCCCC',
+      id: doc.id, // ID берем из документа
+      title: data['title'] ?? 'Без названия',
+      author: data['author'] ?? 'Неизвестен',
+      year: data['year'] is int ? data['year'] : int.tryParse(data['year'].toString()) ?? 0,
+      category: data['category'] ?? 'Разное',
+      coverColorValue: data['coverColor'] ?? 'FF9E9E9E',
     );
   }
 
-  
   Map<String, dynamic> toJson() {
     return {
       'title': title,

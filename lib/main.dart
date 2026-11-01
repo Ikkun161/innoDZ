@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
-import 'ui/screens/catalog_screen.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+import 'ui/screens/auth_screen.dart';
 
-// Тот самый цвет из макета (тёмно-бирюзовый)
-const Color primaryBrandColor = Color(0xFF1B6A5A); 
+const Color primaryBrandColor = Color(0xFF1B6A5A);
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const CatalogApp());
 }
 
@@ -16,14 +21,13 @@ class CatalogApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        scaffoldBackgroundColor: const Color(0xFFF5F5F5), // Светло-серый фон
+        scaffoldBackgroundColor: const Color(0xFFF5F5F5),
         primaryColor: primaryBrandColor,
         colorScheme: ColorScheme.fromSeed(
           seedColor: primaryBrandColor,
           primary: primaryBrandColor,
         ),
         useMaterial3: true,
-        // Настраиваем кнопки по умолчанию
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             backgroundColor: primaryBrandColor,
@@ -31,13 +35,8 @@ class CatalogApp extends StatelessWidget {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           ),
         ),
-        // Настраиваем кнопку "+" (FloatingActionButton)
-        floatingActionButtonTheme: const FloatingActionButtonThemeData(
-          backgroundColor: primaryBrandColor,
-          foregroundColor: Colors.white,
-        ),
       ),
-      home: const CatalogScreen(),
+      home: const AuthScreen(), // Начинаем с экрана входа
     );
   }
 }
