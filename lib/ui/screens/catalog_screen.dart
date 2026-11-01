@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'dart:math';
 
 import '../../domain/entities/book.dart';
+import '../blocs/books_bloc.dart';
+import '../blocs/books_event.dart';
+import '../blocs/books_state.dart';
 import '../widgets/book_card.dart';
 import 'auth_screen.dart';
 import 'book_details_screen.dart';
@@ -24,10 +27,6 @@ class _CatalogScreenState extends State<CatalogScreen> {
   final TextEditingController _authorController = TextEditingController();
   final TextEditingController _categoryController = TextEditingController();
 
-  // Поток данных из Firestore (объявляем вне build)
-  final Stream<QuerySnapshot<Map<String, dynamic>>> _booksStream =
-      FirebaseFirestore.instance.collection('books').snapshots();
-
   @override
   void dispose() {
     _titleController.dispose();
@@ -37,42 +36,33 @@ class _CatalogScreenState extends State<CatalogScreen> {
   }
 
   Future<void> _addBook(String title, String author, String category) async {
-    // Список красивых цветов для обложек
     final List<String> colors = [
-      'FF9E3E37',
-      'FF2F7065',
-      'FF3B5B7A',
-      'FFC69C3C',
-      'FF725D84',
-      'FFCC7722',
-      'FF7B1A2C',
-      'FF3B6B3B',
+      'FF9E3E37', 'FF2F7065', 'FF3B5B7A', 'FFC69C3C',
+      'FF725D84', 'FFCC7722', 'FF7B1A2C', 'FF3B6B3B',
     ];
-    // Выбираем случайный цвет
     final randomColor = colors[Random().nextInt(colors.length)];
 
     final newBook = Book(
       title: title,
       author: author.isEmpty ? 'Неизвестный автор' : author,
       year: DateTime.now().year,
-      category: category.isEmpty
-          ? 'Разное'
-          : category, // Если пусто, ставим "Разное"
-      coverColorValue: randomColor, // Используем случайный цвет
+      category: category.isEmpty ? 'Разное' : category,
+      coverColorValue: randomColor,
     );
 
     try {
-      await FirebaseFirestore.instance
-          .collection('books')
-          .add(newBook.toJson());
+      // Добавляем в Firestore. Bloc сам заметит изменение и обновит список.
+      await FirebaseFirestore.instance.collection('books').add(newBook.toJson());
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Книга добавлена!')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Книга добавлена!')),
+      );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Ошибка: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Ошибка: $e')),
+      );
     }
   }
 
@@ -91,87 +81,53 @@ class _CatalogScreenState extends State<CatalogScreen> {
       context: context,
       builder: (BuildContext context) {
         return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           child: SingleChildScrollView(
-            // Добавили скролл, чтобы окно не ломалось на маленьких экранах
             child: Padding(
               padding: const EdgeInsets.all(24.0),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Новая книга',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
+                  const Text('Новая книга', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 16),
-
-                  // Поле Название
-                  const Text(
-                    'Название *',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
+                  
+                  const Text('Название *', style: TextStyle(fontSize: 12, color: Colors.grey)),
                   const SizedBox(height: 4),
                   TextField(
                     controller: _titleController,
                     decoration: InputDecoration(
                       hintText: 'Война и мир',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 12,
-                      ),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                     ),
                   ),
                   const SizedBox(height: 16),
 
-                  // Поле Автор
-                  const Text(
-                    'Автор',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
+                  const Text('Автор', style: TextStyle(fontSize: 12, color: Colors.grey)),
                   const SizedBox(height: 4),
                   TextField(
                     controller: _authorController,
                     decoration: InputDecoration(
                       hintText: 'Необязательно',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 12,
-                      ),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                     ),
                   ),
                   const SizedBox(height: 16),
 
-                  // НОВОЕ Поле Категория
-                  const Text(
-                    'Категория',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
+                  const Text('Категория', style: TextStyle(fontSize: 12, color: Colors.grey)),
                   const SizedBox(height: 4),
                   TextField(
                     controller: _categoryController,
                     decoration: InputDecoration(
                       hintText: 'Например: Фантастика',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 12,
-                      ),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                     ),
                   ),
                   const SizedBox(height: 24),
 
-                  // Кнопки
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
@@ -196,12 +152,11 @@ class _CatalogScreenState extends State<CatalogScreen> {
                           final title = _titleController.text;
                           final author = _authorController.text;
                           final category = _categoryController.text;
-
-                          Navigator.pop(context); // Закрываем диалог
-
-                          // Передаем все три параметра
-                          await _addBook(title, author, category);
-
+                          
+                          Navigator.pop(context); 
+                          
+                          await _addBook(title, author, category); 
+                          
                           _titleController.clear();
                           _authorController.clear();
                           _categoryController.clear();
@@ -232,13 +187,8 @@ class _CatalogScreenState extends State<CatalogScreen> {
           children: [
             const Text(
               'Каталог книг',
-              style: TextStyle(
-                color: Colors.black,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.bold),
             ),
-            // Счетчик избранного теперь считается динамически (упрощенно)
             Text(
               'В избранном: ${_likedIds.length}',
               style: TextStyle(color: Colors.grey[600], fontSize: 12),
@@ -270,26 +220,17 @@ class _CatalogScreenState extends State<CatalogScreen> {
         children: [
           // Фильтр
           Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16.0,
-              vertical: 12.0,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
             child: Row(
               children: [
                 GestureDetector(
-                  onTap: () =>
-                      setState(() => _showOnlyFavorites = !_showOnlyFavorites),
+                  onTap: () => setState(() => _showOnlyFavorites = !_showOnlyFavorites),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       border: Border.all(
-                        color: _showOnlyFavorites
-                            ? primaryColor
-                            : Colors.grey[300]!,
+                        color: _showOnlyFavorites ? primaryColor : Colors.grey[300]!,
                       ),
                       borderRadius: BorderRadius.circular(20),
                     ),
@@ -298,18 +239,14 @@ class _CatalogScreenState extends State<CatalogScreen> {
                         Icon(
                           Icons.favorite_border,
                           size: 16,
-                          color: _showOnlyFavorites
-                              ? primaryColor
-                              : Colors.grey[600],
+                          color: _showOnlyFavorites ? primaryColor : Colors.grey[600],
                         ),
                         const SizedBox(width: 6),
                         Text(
                           'Только избранные',
                           style: TextStyle(
                             fontSize: 13,
-                            color: _showOnlyFavorites
-                                ? primaryColor
-                                : Colors.grey[800],
+                            color: _showOnlyFavorites ? primaryColor : Colors.grey[800],
                           ),
                         ),
                       ],
@@ -320,75 +257,87 @@ class _CatalogScreenState extends State<CatalogScreen> {
             ),
           ),
 
-          // Список через StreamBuilder
+          // Список через BlocBuilder (ЗАМЕНИЛИ STREAMBUILDER)
           Expanded(
-            child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-              stream: _booksStream,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
+            child: BlocBuilder<BooksBloc, BooksState>(
+              builder: (context, state) {
+                // 1. Состояние загрузки
+                if (state is BooksLoadInProgress) {
                   return const Center(child: CircularProgressIndicator());
                 }
-                if (snapshot.hasError) {
-                  return Center(child: Text('Ошибка: ${snapshot.error}'));
-                }
 
-                final docs = snapshot.data!.docs;
-                if (docs.isEmpty) {
-                  return const Center(
-                    child: Text('Каталог пуст. Добавьте книгу!'),
+                // 2. Состояние ошибки
+                if (state is BooksLoadFailure) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            state.message,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: Colors.red, fontSize: 16),
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: () {
+                              // Отправляем событие загрузки заново
+                              context.read<BooksBloc>().add(BooksLoadRequested());
+                            },
+                            child: const Text('Обновить'),
+                          ),
+                        ],
+                      ),
+                    ),
                   );
                 }
 
-                // Превращаем документы в модели
-                final books = docs
-                    .map((doc) => Book.fromFirestore(doc))
-                    .toList();
+                // 3. Состояние с данными
+                if (state is BooksLoadSuccess) {
+                  final books = state.books;
+                  
+                  // Применяем локальный фильтр
+                  final displayedBooks = _showOnlyFavorites
+                      ? books.where((book) => _likedIds.contains(book.id)).toList()
+                      : books;
 
-                // Применяем фильтр
-                final displayedBooks = _showOnlyFavorites
-                    ? books
-                          .where((book) => _likedIds.contains(book.id))
-                          .toList()
-                    : books;
+                  if (displayedBooks.isEmpty) {
+                    return const Center(child: Text('Ничего не нашлось'));
+                  }
 
-                if (displayedBooks.isEmpty) {
-                  return const Center(child: Text('Ничего не нашлось'));
+                  return ScrollConfiguration(
+                    behavior: ScrollConfiguration.of(context).copyWith(overscroll: false),
+                    child: ListView.builder(
+                      physics: const ClampingScrollPhysics(),
+                      padding: const EdgeInsets.only(left: 16, right: 16, bottom: 80),
+                      itemCount: displayedBooks.length,
+                      itemBuilder: (context, index) {
+                        final book = displayedBooks[index];
+                        return GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => BookDetailsScreen(book: book),
+                              ),
+                            );
+                          },
+                          child: BookCard(
+                            book: book,
+                            isLiked: _likedIds.contains(book.id),
+                            onLikeTap: book.id != null
+                                ? () => _toggleLike(book.id!)
+                                : () {},
+                          ),
+                        );
+                      },
+                    ),
+                  );
                 }
 
-                return ScrollConfiguration(
-                  behavior: ScrollConfiguration.of(context)
-                      .copyWith(overscroll: false),
-                  child: ListView.builder(
-                    physics: const ClampingScrollPhysics(),
-                    padding: const EdgeInsets.only(
-                      left: 16,
-                      right: 16,
-                      bottom: 80,
-                    ),
-                    itemCount: displayedBooks.length,
-                    itemBuilder: (context, index) {
-                      final book = displayedBooks[index];
-                      return GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  BookDetailsScreen(book: book),
-                            ),
-                          );
-                        },
-                        child: BookCard(
-                          book: book,
-                          isLiked: _likedIds.contains(book.id),
-                          onLikeTap: book.id != null
-                              ? () => _toggleLike(book.id!)
-                              : () {},
-                        ),
-                      );
-                    },
-                  ),
-                );
+                // Заглушка, если состояние неизвестно
+                return const SizedBox.shrink();
               },
             ),
           ),
