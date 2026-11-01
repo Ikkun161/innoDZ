@@ -1,12 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-import 'catalog_screen.dart';
-
-import 'package:flutter_bloc/flutter_bloc.dart';
-
-import '../blocs/books_bloc.dart';
-import '../blocs/books_event.dart';
+// <-- ДОБАВИЛИ
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -18,7 +13,7 @@ class AuthScreen extends StatefulWidget {
 class _AuthScreenState extends State<AuthScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _isLogin = true; // Переключатель Вход/Регистрация
+  bool _isLogin = true;
   bool _isLoading = false;
   String? _errorCode;
 
@@ -35,36 +30,20 @@ class _AuthScreenState extends State<AuthScreen> {
 
     try {
       if (_isLogin) {
-        await _auth.signInWithEmailAndPassword(
-          email: email,
-          password: password,
-        );
+        await _auth.signInWithEmailAndPassword(email: email, password: password);
       } else {
-        await _auth.createUserWithEmailAndPassword(
-          email: email,
-          password: password,
-        );
+        await _auth.createUserWithEmailAndPassword(email: email, password: password);
       }
-
-      // При успехе переходим в каталог (оборачиваем в BlocProvider)
-      if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => BlocProvider(
-            create: (_) => BooksBloc()..add(BooksLoadRequested()),
-            child: const CatalogScreen(),
-          ),
-        ),
-      );
+      
+      // Убрали Navigator.pushReplacement!
+      // Так как в main.dart стоит StreamBuilder, он сам заметит вход 
+      // и автоматически переключит экран на CatalogScreen.
+      
     } on FirebaseAuthException catch (e) {
-      // Ловим специфичные ошибки Firebase (неверный пароль и т.д.)
       setState(() => _errorCode = e.code);
     } catch (e) {
-      // Ловим все остальные ошибки
       setState(() => _errorCode = e.toString());
     } finally {
-      // Этот блок выполнится в любом случае (и при успехе, и при ошибке)
       if (mounted) setState(() => _isLoading = false);
     }
   }
@@ -81,27 +60,18 @@ class _AuthScreenState extends State<AuthScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 40),
-              // Логотип (иконка книги)
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: primaryColor,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(
-                  Icons.menu_book,
-                  color: Colors.white,
-                  size: 32,
-                ),
+                child: const Icon(Icons.menu_book, color: Colors.white, size: 32),
               ),
               const SizedBox(height: 24),
-
               Text(
                 _isLogin ? 'Вход' : 'Регистрация',
-                style: const TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               Text(
@@ -112,7 +82,6 @@ class _AuthScreenState extends State<AuthScreen> {
               ),
               const SizedBox(height: 32),
 
-              // Блок ошибки (как на макете)
               if (_errorCode != null) ...[
                 Container(
                   padding: const EdgeInsets.all(12),
@@ -136,11 +105,7 @@ class _AuthScreenState extends State<AuthScreen> {
                 const SizedBox(height: 16),
               ],
 
-              // Поле Email
-              const Text(
-                'Email',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
-              ),
+              const Text('Email', style: TextStyle(fontSize: 12, color: Colors.grey)),
               const SizedBox(height: 4),
               TextField(
                 controller: _emailController,
@@ -156,20 +121,14 @@ class _AuthScreenState extends State<AuthScreen> {
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                     borderSide: BorderSide(
-                      color: _errorCode != null
-                          ? Colors.red
-                          : Colors.grey[300]!,
+                      color: _errorCode != null ? Colors.red : Colors.grey[300]!,
                     ),
                   ),
                 ),
               ),
               const SizedBox(height: 16),
 
-              // Поле Пароль
-              const Text(
-                'Пароль',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
-              ),
+              const Text('Пароль', style: TextStyle(fontSize: 12, color: Colors.grey)),
               const SizedBox(height: 4),
               TextField(
                 controller: _passwordController,
@@ -185,16 +144,13 @@ class _AuthScreenState extends State<AuthScreen> {
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                     borderSide: BorderSide(
-                      color: _errorCode != null
-                          ? Colors.red
-                          : Colors.grey[300]!,
+                      color: _errorCode != null ? Colors.red : Colors.grey[300]!,
                     ),
                   ),
                 ),
               ),
               const SizedBox(height: 24),
 
-              // Кнопка
               SizedBox(
                 width: double.infinity,
                 height: 50,
@@ -207,14 +163,11 @@ class _AuthScreenState extends State<AuthScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Переключатель
               Center(
                 child: TextButton(
                   onPressed: () => setState(() => _isLogin = !_isLogin),
                   child: Text(
-                    _isLogin
-                        ? 'Нет аккаунта? Зарегистрироваться'
-                        : 'Уже есть аккаунт? Войти',
+                    _isLogin ? 'Нет аккаунта? Зарегистрироваться' : 'Уже есть аккаунт? Войти',
                     style: TextStyle(color: primaryColor),
                   ),
                 ),

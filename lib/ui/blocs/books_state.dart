@@ -2,16 +2,32 @@ import '../../domain/entities/book.dart';
 
 sealed class BooksState {}
 
-// 1. Идет загрузка
 class BooksLoadInProgress extends BooksState {}
 
-// 2. Данные успешно загружены
 class BooksLoadSuccess extends BooksState {
   final List<Book> books;
-  BooksLoadSuccess(this.books);
+  final Set<String> likedIds;
+  final bool showOnlyFavorites;
+
+  BooksLoadSuccess({
+    required this.books,
+    required this.likedIds,
+    this.showOnlyFavorites = false,
+  });
+
+  BooksLoadSuccess copyWith({
+    List<Book>? books,
+    Set<String>? likedIds,
+    bool? showOnlyFavorites,
+  }) {
+    return BooksLoadSuccess(
+      books: books ?? this.books,
+      likedIds: likedIds ?? this.likedIds,
+      showOnlyFavorites: showOnlyFavorites ?? this.showOnlyFavorites,
+    );
+  }
 }
 
-// 3. Произошла ошибка
 class BooksLoadFailure extends BooksState {
   final String message;
   BooksLoadFailure(this.message);

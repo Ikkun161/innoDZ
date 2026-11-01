@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'dart:math';
 
 import '../../domain/entities/book.dart';
-import '../blocs/books_bloc.dart';
-import '../blocs/books_event.dart';
+import '../blocs/books_cubit.dart';
 import '../blocs/books_state.dart';
 import '../widgets/book_card.dart';
 import 'auth_screen.dart';
 import 'book_details_screen.dart';
+import 'profile_screen.dart';
 
 class CatalogScreen extends StatefulWidget {
   const CatalogScreen({super.key});
@@ -20,9 +19,6 @@ class CatalogScreen extends StatefulWidget {
 }
 
 class _CatalogScreenState extends State<CatalogScreen> {
-  final Set<String> _likedIds = {};
-  bool _showOnlyFavorites = false;
-
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _authorController = TextEditingController();
   final TextEditingController _categoryController = TextEditingController();
@@ -35,7 +31,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
     super.dispose();
   }
 
-  Future<void> _addBook(String title, String author, String category) async {
+  void _addBook(String title, String author, String category) {
     final List<String> colors = [
       'FF9E3E37', 'FF2F7065', 'FF3B5B7A', 'FFC69C3C',
       'FF725D84', 'FFCC7722', 'FF7B1A2C', 'FF3B6B3B',
@@ -50,36 +46,18 @@ class _CatalogScreenState extends State<CatalogScreen> {
       coverColorValue: randomColor,
     );
 
-    try {
-      // Добавляем в Firestore. Bloc сам заметит изменение и обновит список.
-      await FirebaseFirestore.instance.collection('books').add(newBook.toJson());
+    context.read<BooksCubit>().addBook(newBook);
 
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Книга добавлена!')),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ошибка: $e')),
-      );
-    }
-  }
-
-  void _toggleLike(String id) {
-    setState(() {
-      if (_likedIds.contains(id)) {
-        _likedIds.remove(id);
-      } else {
-        _likedIds.add(id);
-      }
-    });
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Книга добавлена!')),
+    );
   }
 
   void _showAddBookDialog() {
     showDialog(
       context: context,
-      builder: (BuildContext context) {
+      builder: (BuildContext dialogContext) {
         return Dialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           child: SingleChildScrollView(
@@ -136,15 +114,15 @@ class _CatalogScreenState extends State<CatalogScreen> {
                           _titleController.clear();
                           _authorController.clear();
                           _categoryController.clear();
-                          Navigator.pop(context);
+                          Navigator.pop(dialogContext);
                         },
                         child: const Text('Отмена'),
                       ),
                       const SizedBox(width: 12),
                       ElevatedButton(
-                        onPressed: () async {
+                        onPressed: () {
                           if (_titleController.text.trim().isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
+                            ScaffoldMessenger.of(dialogContext).showSnackBar(
                               const SnackBar(content: Text('Введите название')),
                             );
                             return;
@@ -153,9 +131,8 @@ class _CatalogScreenState extends State<CatalogScreen> {
                           final author = _authorController.text;
                           final category = _categoryController.text;
                           
-                          Navigator.pop(context); 
-                          
-                          await _addBook(title, author, category); 
+                          Navigator.pop(dialogContext); 
+                          _addBook(title, author, category); 
                           
                           _titleController.clear();
                           _authorController.clear();
@@ -182,30 +159,60 @@ class _CatalogScreenState extends State<CatalogScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Каталог книг',
-              style: TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            Text(
-              'В избранном: ${_likedIds.length}',
-              style: TextStyle(color: Colors.grey[600], fontSize: 12),
-            ),
-          ],
+        title: BlocBuilder<BooksCubit, BooksState>(
+          builder: (context, state) {
+            int likedCount = 0;
+            if (state is BooksLoadSuccess) {
+              likedCount = state.likedIds.length;
+            }
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Каталог книг',
+                  style: TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  'В избранном: $likedCount',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                ),
+              ],
+            );
+          },
         ),
         actions: [
+          BlocBuilder<BooksCubit, BooksState>(
+            builder: (context, state) {
+              int totalBooks = 0;
+              int likedCount = 0;
+              if (state is BooksLoadSuccess) {
+                totalBooks = state.books.length;
+                likedCount = state.likedIds.length;
+              }
+
+              return IconButton(
+                icon: const Icon(Icons.person_outline, color: Colors.black),
+                tooltip: 'Профиль',
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ProfileScreen(
+                        totalBooks: totalBooks,
+                        favoritesCount: likedCount,
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+          
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.black),
             tooltip: 'Выйти',
             onPressed: () async {
               await FirebaseAuth.instance.signOut();
-              if (!mounted) return;
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const AuthScreen()),
-              );
             },
           ),
         ],
@@ -223,50 +230,58 @@ class _CatalogScreenState extends State<CatalogScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
             child: Row(
               children: [
-                GestureDetector(
-                  onTap: () => setState(() => _showOnlyFavorites = !_showOnlyFavorites),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      border: Border.all(
-                        color: _showOnlyFavorites ? primaryColor : Colors.grey[300]!,
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.favorite_border,
-                          size: 16,
-                          color: _showOnlyFavorites ? primaryColor : Colors.grey[600],
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Только избранные',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: _showOnlyFavorites ? primaryColor : Colors.grey[800],
+                BlocBuilder<BooksCubit, BooksState>(
+                  builder: (context, state) {
+                    bool isFilterOn = false;
+                    if (state is BooksLoadSuccess) {
+                      isFilterOn = state.showOnlyFavorites;
+                    }
+                    
+                    return GestureDetector(
+                      // ИСПРАВЛЕНО: Здесь только переключение фильтра
+                      onTap: () => context.read<BooksCubit>().toggleFilter(),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          border: Border.all(
+                            color: isFilterOn ? primaryColor : Colors.grey[300]!,
                           ),
+                          borderRadius: BorderRadius.circular(20),
                         ),
-                      ],
-                    ),
-                  ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.favorite_border,
+                              size: 16,
+                              color: isFilterOn ? primaryColor : Colors.grey[600],
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Только избранные',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: isFilterOn ? primaryColor : Colors.grey[800],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
           ),
 
-          // Список через BlocBuilder (ЗАМЕНИЛИ STREAMBUILDER)
+          // Список
           Expanded(
-            child: BlocBuilder<BooksBloc, BooksState>(
+            child: BlocBuilder<BooksCubit, BooksState>(
               builder: (context, state) {
-                // 1. Состояние загрузки
                 if (state is BooksLoadInProgress) {
                   return const Center(child: CircularProgressIndicator());
                 }
 
-                // 2. Состояние ошибки
                 if (state is BooksLoadFailure) {
                   return Center(
                     child: Padding(
@@ -281,10 +296,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                           ),
                           const SizedBox(height: 16),
                           ElevatedButton(
-                            onPressed: () {
-                              // Отправляем событие загрузки заново
-                              context.read<BooksBloc>().add(BooksLoadRequested());
-                            },
+                            onPressed: () => context.read<BooksCubit>().load(),
                             child: const Text('Обновить'),
                           ),
                         ],
@@ -293,17 +305,22 @@ class _CatalogScreenState extends State<CatalogScreen> {
                   );
                 }
 
-                // 3. Состояние с данными
                 if (state is BooksLoadSuccess) {
                   final books = state.books;
-                  
-                  // Применяем локальный фильтр
-                  final displayedBooks = _showOnlyFavorites
-                      ? books.where((book) => _likedIds.contains(book.id)).toList()
+                  final likedIds = state.likedIds;
+                  final showOnly = state.showOnlyFavorites;
+
+                  final displayedBooks = showOnly
+                      ? books.where((book) => likedIds.contains(book.id)).toList()
                       : books;
 
                   if (displayedBooks.isEmpty) {
-                    return const Center(child: Text('Ничего не нашлось'));
+                    return Center(
+                      child: Text(
+                        showOnly ? 'В избранном пока пусто' : 'Каталог пуст',
+                        style: const TextStyle(fontSize: 16, color: Colors.grey),
+                      ),
+                    );
                   }
 
                   return ScrollConfiguration(
@@ -315,19 +332,23 @@ class _CatalogScreenState extends State<CatalogScreen> {
                       itemBuilder: (context, index) {
                         final book = displayedBooks[index];
                         return GestureDetector(
+                          // ИСПРАВЛЕНО: Здесь переход на экран деталей с передачей Cubit
                           onTap: () {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => BookDetailsScreen(book: book),
+                                builder: (newContext) => BlocProvider.value(
+                                  value: context.read<BooksCubit>(),
+                                  child: BookDetailsScreen(book: book),
+                                ),
                               ),
                             );
                           },
                           child: BookCard(
                             book: book,
-                            isLiked: _likedIds.contains(book.id),
+                            isLiked: likedIds.contains(book.id),
                             onLikeTap: book.id != null
-                                ? () => _toggleLike(book.id!)
+                                ? () => context.read<BooksCubit>().toggleLike(book.id!)
                                 : () {},
                           ),
                         );
@@ -336,7 +357,6 @@ class _CatalogScreenState extends State<CatalogScreen> {
                   );
                 }
 
-                // Заглушка, если состояние неизвестно
                 return const SizedBox.shrink();
               },
             ),

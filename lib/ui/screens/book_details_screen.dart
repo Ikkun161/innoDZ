@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart'; 
+
 import '../../domain/entities/book.dart';
+import '../blocs/books_cubit.dart'; 
+import '../blocs/books_state.dart'; 
 
 class BookDetailsScreen extends StatelessWidget {
   final Book book;
@@ -8,12 +12,12 @@ class BookDetailsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Берем цвет обложки (с защитой от null)
-    final coverColor = Color(int.tryParse(book.coverColorValue, radix: 16) ?? 0xFF9E9E9E);
+    final coverColor = Color(
+      int.tryParse(book.coverColorValue, radix: 16) ?? 0xFF9E9E9E,
+    );
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5), // Светло-серый фон
-      // Делаем прозрачный AppBar с круглыми кнопками
+      backgroundColor: const Color(0xFFF5F5F5), 
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -29,28 +33,46 @@ class BookDetailsScreen extends StatelessWidget {
           ),
         ),
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16, top: 8),
-            child: CircleAvatar(
-              backgroundColor: Colors.white,
-              child: const Icon(Icons.favorite, color: Colors.red),
-            ),
+          BlocBuilder<BooksCubit, BooksState>(
+            builder: (context, state) {
+              bool isLiked = false;
+              if (state is BooksLoadSuccess) {
+                isLiked = state.likedIds.contains(book.id);
+              }
+              return Padding(
+                padding: const EdgeInsets.only(right: 16, top: 8),
+                child: CircleAvatar(
+                  backgroundColor: Colors.white,
+                  child: IconButton(
+                    icon: Icon(
+                      isLiked ? Icons.favorite : Icons.favorite_border,
+                      color: isLiked ? Colors.red : Colors.grey,
+                    ),
+                    onPressed: () {
+                      if (book.id != null) {
+                        context.read<BooksCubit>().toggleLike(book.id!);
+                      }
+                    },
+                  ),
+                ),
+              );
+            },
           ),
         ],
       ),
-      
+
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 100), // Отступ под прозрачный AppBar
+            const SizedBox(height: 100), 
             
             // 1. Большая обложка
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
               child: Container(
                 width: double.infinity,
-                height: 280, // Высокая обложка как в макете
+                height: 280, 
                 decoration: BoxDecoration(
                   color: coverColor,
                   borderRadius: BorderRadius.circular(24),
@@ -67,7 +89,7 @@ class BookDetailsScreen extends StatelessWidget {
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 24),
 
             // 2. Текстовый блок (Название, Автор, Теги)
@@ -87,26 +109,29 @@ class BookDetailsScreen extends StatelessWidget {
                   const SizedBox(height: 6),
                   Text(
                     '${book.author} • ${book.year}',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                    ),
+                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                   ),
                   const SizedBox(height: 12),
-                  
+
                   // Теги
                   Wrap(
                     spacing: 8,
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFFE0F2F1), // Светло-бирюзовый
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
                           book.category,
-                          style: const TextStyle(fontSize: 12, color: Color(0xFF1B6A5A)),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF1B6A5A),
+                          ),
                         ),
                       ),
                     ],
@@ -175,7 +200,7 @@ class BookDetailsScreen extends StatelessWidget {
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 40), // Отступ снизу
           ],
         ),
@@ -183,15 +208,11 @@ class BookDetailsScreen extends StatelessWidget {
     );
   }
 
-  // Вспомогательный метод для строк в белой карточке
   Widget _buildInfoRow(String label, String value) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label,
-          style: TextStyle(fontSize: 14, color: Colors.grey[500]),
-        ),
+        Text(label, style: TextStyle(fontSize: 14, color: Colors.grey[500])),
         Text(
           value,
           style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
