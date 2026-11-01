@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "678887239528",
+    "project_id": "innodz",
+    "storage_bucket": "innodz.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:678887239528:android:e717c4fd662706d4ec30dd",
+        "android_client_info": {
+          "package_name": "com.example.flutter_application_1"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAY_KH-cPs2JsdczdqfyMUaMeX4qUFAUfk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
