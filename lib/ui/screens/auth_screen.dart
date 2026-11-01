@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+
 import 'catalog_screen.dart';
+
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../blocs/books_bloc.dart';
+import '../blocs/books_event.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -29,21 +35,36 @@ class _AuthScreenState extends State<AuthScreen> {
 
     try {
       if (_isLogin) {
-        await _auth.signInWithEmailAndPassword(email: email, password: password);
+        await _auth.signInWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
       } else {
-        await _auth.createUserWithEmailAndPassword(email: email, password: password);
+        await _auth.createUserWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
       }
-      // При успехе переходим в каталог
+
+      // При успехе переходим в каталог (оборачиваем в BlocProvider)
       if (!mounted) return;
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const CatalogScreen()),
+        MaterialPageRoute(
+          builder: (_) => BlocProvider(
+            create: (_) => BooksBloc()..add(BooksLoadRequested()),
+            child: const CatalogScreen(),
+          ),
+        ),
       );
     } on FirebaseAuthException catch (e) {
-      setState(() => _errorCode = e.code); // Показываем код ошибки
+      // Ловим специфичные ошибки Firebase (неверный пароль и т.д.)
+      setState(() => _errorCode = e.code);
     } catch (e) {
+      // Ловим все остальные ошибки
       setState(() => _errorCode = e.toString());
     } finally {
+      // Этот блок выполнится в любом случае (и при успехе, и при ошибке)
       if (mounted) setState(() => _isLoading = false);
     }
   }
@@ -67,13 +88,20 @@ class _AuthScreenState extends State<AuthScreen> {
                   color: primaryColor,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.menu_book, color: Colors.white, size: 32),
+                child: const Icon(
+                  Icons.menu_book,
+                  color: Colors.white,
+                  size: 32,
+                ),
               ),
               const SizedBox(height: 24),
-              
+
               Text(
                 _isLogin ? 'Вход' : 'Регистрация',
-                style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 8),
               Text(
@@ -109,7 +137,10 @@ class _AuthScreenState extends State<AuthScreen> {
               ],
 
               // Поле Email
-              const Text('Email', style: TextStyle(fontSize: 12, color: Colors.grey)),
+              const Text(
+                'Email',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
               const SizedBox(height: 4),
               TextField(
                 controller: _emailController,
@@ -125,7 +156,9 @@ class _AuthScreenState extends State<AuthScreen> {
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                     borderSide: BorderSide(
-                      color: _errorCode != null ? Colors.red : Colors.grey[300]!,
+                      color: _errorCode != null
+                          ? Colors.red
+                          : Colors.grey[300]!,
                     ),
                   ),
                 ),
@@ -133,7 +166,10 @@ class _AuthScreenState extends State<AuthScreen> {
               const SizedBox(height: 16),
 
               // Поле Пароль
-              const Text('Пароль', style: TextStyle(fontSize: 12, color: Colors.grey)),
+              const Text(
+                'Пароль',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
               const SizedBox(height: 4),
               TextField(
                 controller: _passwordController,
@@ -149,7 +185,9 @@ class _AuthScreenState extends State<AuthScreen> {
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                     borderSide: BorderSide(
-                      color: _errorCode != null ? Colors.red : Colors.grey[300]!,
+                      color: _errorCode != null
+                          ? Colors.red
+                          : Colors.grey[300]!,
                     ),
                   ),
                 ),
@@ -174,7 +212,9 @@ class _AuthScreenState extends State<AuthScreen> {
                 child: TextButton(
                   onPressed: () => setState(() => _isLogin = !_isLogin),
                   child: Text(
-                    _isLogin ? 'Нет аккаунта? Зарегистрироваться' : 'Уже есть аккаунт? Войти',
+                    _isLogin
+                        ? 'Нет аккаунта? Зарегистрироваться'
+                        : 'Уже есть аккаунт? Войти',
                     style: TextStyle(color: primaryColor),
                   ),
                 ),
